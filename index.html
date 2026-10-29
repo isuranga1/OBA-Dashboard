@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DS OBA 2020 Batch Dashboard (Demo)</title>
+<style>
+:root{color-scheme:dark;--bg:#0a0a0a;--sf:#151515;--ink:#f4ecd6;--mut:#a89f86;--ln:#33301f;--pri:#d4a937;--onpri:#0a0a0a;--acc:#f0c75e;--ok:#6fcf97;--okbg:#14301f;--wn:#f0c75e;--wnbg:#3a2f0d;--bad:#ff8a80;--badbg:#3d1c19;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:700;margin:0}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+aside{background:var(--pri);color:var(--onpri);padding:20px 14px;display:flex;flex-direction:column;gap:6px}
+aside h1{font-size:20px;line-height:1.2;margin-bottom:2px}
+aside small{opacity:.75;display:block;margin-bottom:14px}
+.nav button{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;padding:9px 10px;border-radius:6px;font:inherit;cursor:pointer;opacity:.85}
+.nav button:hover{background:rgba(0,0,0,.12)}
+.nav button.on{background:#0a0a0a;color:var(--acc);opacity:1;font-weight:600}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.role{margin-top:auto;font-size:13px}
+.role select{width:100%;margin-top:4px}
+main{padding:24px clamp(14px,3vw,36px);max-width:1000px;width:100%}
+main h2{font-size:26px;margin-bottom:4px}
+.sub{color:var(--mut);margin:0 0 18px}
+.card{background:var(--sf);border:1px solid var(--ln);border-top:2px solid var(--pri);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h3{font-size:17px;margin-bottom:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:10px}
+input,select,textarea{display:block;width:100%;margin-top:3px;padding:8px 10px;border:1px solid var(--ln);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+button.b{background:var(--pri);color:var(--onpri);border:0;border-radius:6px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.b.alt{background:none;color:var(--ink);border:1px solid var(--ln)}
+button.b.bad{background:var(--badbg);color:var(--bad)}
+button.b:disabled{opacity:.4;cursor:not-allowed}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--ln);vertical-align:middle}
+th{color:var(--mut);font-weight:600;font-size:13px}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.pending{background:var(--wnbg);color:var(--wn)}.approved,.present{background:var(--okbg);color:var(--ok)}.rejected{background:var(--badbg);color:var(--bad)}.excuse{background:var(--wnbg);color:var(--wn)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bar{height:8px;background:var(--pri);border-radius:4px;min-width:2px}
+.step{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.step span{font-size:12px;color:var(--mut)}
+.note{font-size:13px;color:var(--mut)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:9;max-width:90vw}
+.top{display:none}
+@media(max-width:720px){.app{grid-template-columns:1fr}aside{flex-direction:row;flex-wrap:wrap;align-items:center;padding:12px}aside small{display:none}.nav{display:flex;flex-wrap:wrap;gap:4px;width:100%}.nav button{width:auto}.role{margin:0;width:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+ <h1>DS OBA 2020</h1><small>Batch dashboard &middot; demo</small>
+ <nav class="nav" id="nav" aria-label="Sections"></nav>
+ <label class="role">Viewing as
+  <select id="role"><option value="member">Member (Kavindu)</option><option value="admin">Admin (Isuranga)</option><option value="finance">Finance (Nuwan)</option></select>
+ </label>
+</aside>
+<main id="main"></main>
+</div>
+<div id="toast" class="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>'LKR '+Number(n).toLocaleString('en-US');
+const S={
+ members:[
+  {id:1,name:'Kavindu Perera',email:'kavindu@example.com',phone:'077 123 4567',work:'Hemas',role:'Software Engineer',pts:40},
+  {id:2,name:'Isuranga Silva',email:'isuranga@example.com',phone:'071 222 3344',work:'WSO2',role:'DevOps Engineer',pts:85},
+  {id:3,name:'Nuwan Fernando',email:'nuwan@example.com',phone:'076 555 8899',work:'Commercial Bank',role:'Finance Officer',pts:60},
+  {id:4,name:'Zaid Mohamed',email:'zaid@example.com',phone:'070 912 3456',work:'Dialog',role:'HR Executive',pts:70},
+  {id:5,name:'Himal Jayasuriya',email:'himal@example.com',phone:'072 333 1122',work:'Hayleys',role:'Marketing Manager',pts:90},
+  {id:6,name:'Guwan Wickramasinghe',email:'guwan@example.com',phone:'075 444 6677',work:'Self-employed',role:'Photographer',pts:35},
+  {id:7,name:'Althaf Rizwan',email:'althaf@example.com',phone:'078 100 2030',work:'John Keells',role:'Accountant',pts:50},
+  {id:8,name:'Thevin Rajapaksha',email:'thevin@example.com',phone:'077 808 9090',work:'Virtusa',role:'QA Engineer',pts:45}],
+ pay:[
+  {id:1,m:1,amt:3000,date:'2026-08-05',slip:'slip-aug.jpg',st:'approved',xl:1,dr:1},
+  {id:2,m:1,amt:3000,date:'2026-09-04',slip:'slip-sep.jpg',st:'approved',xl:1,dr:1},
+  {id:3,m:5,amt:5000,date:'2026-09-10',slip:'himal-sep.pdf',st:'approved',xl:1,dr:1},
+  {id:4,m:7,amt:2500,date:'2026-10-03',slip:'althaf.jpg',st:'approved',xl:1,dr:1},
+  {id:5,m:1,amt:3000,date:'2026-10-06',slip:'slip-oct.jpg',st:'pending',xl:0,dr:0},
+  {id:6,m:8,amt:2000,date:'2026-10-12',slip:'thevin.png',st:'pending',xl:1,dr:0},
+  {id:7,m:4,amt:4000,date:'2026-07-15',slip:'zaid-jul.pdf',st:'approved',xl:1,dr:1}],
+ eff:[
+  {id:1,m:6,title:'Photographed batch reunion planning session',hrs:3,st:'pending',pts:0},
+  {id:2,m:2,title:'Built first dashboard prototype',hrs:12,st:'pending',pts:0},
+  {id:3,m:5,title:'Booked Club House venue',hrs:4,st:'approved',pts:20}],
+ meet:[
+  {id:1,title:'Committee meeting',date:'2026-10-21',venue:'School Library',open:0,att:{1:'present',2:'present',3:'present',4:'excuse',5:'present'}},
+  {id:2,title:'Batch party planning',date:'2026-11-04',venue:'Online (Zoom)',open:1,att:{}}],
+ jobs:[
+  {t:'Junior Data Analyst',c:'Dialog Axiata',d:'Analyse customer data, build dashboards, SQL and Excel reporting.',tag:'data'},
+  {t:'Backend Developer',c:'WSO2',d:'Build APIs and cloud services in Java and Go.',tag:'software'},
+  {t:'Management Trainee, Finance',c:'Commercial Bank',d:'Rotational programme in treasury, audit and budgeting.',tag:'finance'},
+  {t:'Brand Executive',c:'Hayleys',d:'Plan campaigns, social media content and events.',tag:'marketing'},
+  {t:'Civil Site Engineer',c:'MAGA Engineering',d:'Supervise construction sites, quantity surveying and safety.',tag:'engineering'},
+  {t:'Graduate HR Associate',c:'Brandix',d:'Recruitment, onboarding and employee engagement.',tag:'hr'},
+  {t:'QA Automation Engineer',c:'Virtusa',d:'Write automated tests and maintain CI pipelines.',tag:'software'},
+  {t:'Accounts Assistant',c:'John Keells',d:'Bookkeeping, payables, month-end close and audit support.',tag:'finance'}]
+};
+const ROLES={
+ member:{uid:1,tabs:[['profile','My profile'],['pay','Payments'],['eff','Other contributions'],['att','Meetings']]},
+ admin:{uid:2,tabs:[['users','Find members'],['jobs','Job search'],['sort','Contribution totals'],['aeff','Effort approvals'],['pts','Points'],['meet','Batch meetings']]},
+ finance:{uid:3,tabs:[['fin','Payment approvals']]}};
+let role='member',tab='profile',sortMode='month',q={users:'',jobs:''};
+const nm=id=>S.members.find(m=>m.id===id).name;
+const tag=s=>`<span class="tag ${s}">${s}</span>`;
+function toast(t){const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,2400)}
+const val=id=>$('#'+id).value.trim();
+
+/* fuzzy name search: substring, token prefix, then edit distance */
+function lev(a,b){const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t}}return d[b.length]}
+function nameScore(name,query){const n=name.toLowerCase(),k=query.toLowerCase().trim();if(!k)return 1;if(n.includes(k))return 3;
+ let s=0;for(const w of k.split(/\s+/)){let best=0;for(const t of n.split(/\s+/)){if(t.startsWith(w))best=Math.max(best,2);else{const dist=lev(w,t.slice(0,w.length+1));if(dist<=Math.max(1,Math.floor(w.length/3)))best=Math.max(best,1)}}if(!best)return 0;s+=best}return s}
+/* simulated semantic search: concept groups stand in for embeddings */
+const CONCEPTS=[['data','analyst','analytics','sql','statistics','dashboard','reporting'],['software','developer','programming','code','engineer','api','backend','tech'],['finance','accounting','accounts','bank','audit','budget','money'],['marketing','brand','campaign','social','media','advertising'],['hr','people','recruitment','hiring','onboarding','talent'],['construction','civil','site','building','engineering','safety']];
+function sem(job,query){const toks=query.toLowerCase().split(/\W+/).filter(Boolean);if(!toks.length)return 1;const text=(job.t+' '+job.d+' '+job.tag).toLowerCase();let s=0;
+ for(const t of toks){if(text.includes(t))s+=2;for(const g of CONCEPTS){if(g.some(x=>x.startsWith(t)||t.startsWith(x))&&g.some(x=>text.includes(x)))s+=1}}return s}
+
+const TIERS=[
+ {n:'Bronze',min:0,c:'#b87333',b:['Access to the batch dashboard and job bank','Invitations to all batch events','Listed in the batch member directory']},
+ {n:'Silver',min:50,c:'#c4c7cc',b:['Voting rights on proposed batch projects','10% off batch party tickets','Priority seating at the reunion']},
+ {n:'Gold',min:100,c:'#d4a937',b:['Free batch party ticket','Batch tie pin','Nominate and lead a batch project']},
+ {n:'Platinum',min:200,c:'#9fd8e8',b:['Free ticket plus a guest at batch events','Recognition at school anniversary events','A seat on the organising committee']}];
+const V={
+profile(){const m=S.members[0],ti=TIERS.filter(t=>m.pts>=t.min).length-1,t=TIERS[ti],n=TIERS[ti+1],pct=n?Math.round((m.pts-t.min)/(n.min-t.min)*100):100;return `<h2>My profile</h2><p class="sub">Keep your details current so the batch can reach you.</p>
+<div class="card"><div class="row" style="gap:16px;flex-wrap:nowrap"><div aria-hidden="true" style="flex:none;width:72px;height:72px;border-radius:50%;background:${t.c};color:#0a0a0a;display:grid;place-items:center;font:700 30px Georgia,serif;border:3px solid var(--acc)">${t.n[0]}</div>
+<div style="flex:1"><h3 style="margin:0">${t.n} tier</h3><span class="note">${m.pts} points${n?` &middot; ${n.min-m.pts} more to reach ${n.n}`:' &middot; Top tier reached'}</span>
+<div style="height:8px;background:var(--ln);border-radius:4px;margin-top:8px"><div class="bar" style="width:${pct}%;background:${t.c}"></div></div></div></div>
+<div class="grid" style="margin-top:16px"><div><b>Your benefits now</b><ul style="margin:6px 0 0;padding-left:18px">${t.b.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+<div><b>${n?`Unlock at ${n.n} (${n.min} points)`:'Keep contributing'}</b>${n?`<ul style="margin:6px 0 0;padding-left:18px">${n.b.map(x=>`<li>${x}</li>`).join('')}</ul>`:'<p class="note" style="margin:6px 0 0">You’ve unlocked every benefit. Thank you for supporting the batch.</p>'}</div></div></div>
+<div class="card"><div class="grid">
+${[['name','Full name',m.name],['email','Email',m.email],['phone','Phone',m.phone],['work','Workplace',m.work],['role','Job title',m.role]].map(f=>`<label>${f[1]}<input id="p_${f[0]}" value="${esc(f[2])}"></label>`).join('')}
+</div><div class="row"><button class="b" data-a="saveProfile">Save changes</button><span class="note">Points earned: <b>${m.pts}</b></span></div></div>`},
+pay(){const rows=S.pay.filter(p=>p.m===1);return `<h2>Payments</h2><p class="sub">Record a payment and attach your slip. Finance reviews it before it counts.</p>
+<div class="card"><h3>Record a payment</h3><div class="grid">
+<label>Amount (LKR)<input id="n_amt" type="number" min="100" placeholder="3000"></label>
+<label>Payment date<input id="n_date" type="date" value="2026-10-29"></label>
+<label>Slip (demo: file name only)<input id="n_slip" placeholder="slip-oct.jpg"></label></div>
+<button class="b" data-a="addPay">Submit for approval</button></div>
+<div class="card"><h3>My payments</h3><div class="tw"><table><tr><th>Date</th><th>Amount</th><th>Slip</th><th>Status</th></tr>
+${rows.map(p=>`<tr><td>${p.date}</td><td>${fmt(p.amt)}</td><td>${esc(p.slip)}</td><td>${tag(p.st)}</td></tr>`).join('')}</table></div></div>`},
+eff(){const rows=S.eff.filter(e=>e.m===1);return `<h2>Other contributions</h2><p class="sub">Time and effort count too. A second person approves each one.</p>
+<div class="card"><h3>Record a contribution</h3><div class="grid">
+<label>What did you do?<input id="e_title" placeholder="Designed the invitation poster"></label>
+<label>Hours spent<input id="e_hrs" type="number" min="1" placeholder="3"></label></div>
+<button class="b" data-a="addEff">Submit for approval</button></div>
+<div class="card"><h3>My contributions</h3>${rows.length?`<div class="tw"><table><tr><th>Contribution</th><th>Hours</th><th>Points</th><th>Status</th></tr>${rows.map(e=>`<tr><td>${esc(e.title)}</td><td>${e.hrs}</td><td>${e.pts||'–'}</td><td>${tag(e.st)}</td></tr>`).join('')}</table></div>`:'<p class="note">Nothing recorded yet. Add your first contribution above.</p>'}</div>`},
+att(){return `<h2>Meetings</h2><p class="sub">Mark that you’re attending, or raise an excuse if you can’t make it.</p>
+${S.meet.slice().reverse().map(m=>{const a=m.att[1];return `<div class="card"><div class="row" style="justify-content:space-between"><div><h3>${esc(m.title)}</h3><span class="note">${m.date} &middot; ${esc(m.venue)}</span></div>${a?tag(a):m.open?'':'<span class="tag rejected">absent</span>'}</div>
+${m.open&&!a?`<div class="row" style="margin-top:10px"><button class="b" data-a="present" data-id="${m.id}">I’ll attend</button><input id="x_${m.id}" placeholder="Reason for excuse" style="max-width:260px;margin:0"><button class="b alt" data-a="excuse" data-id="${m.id}">Raise excuse</button></div>`:''}</div>`}).join('')}`},
+users(){const r=S.members.map(m=>({m,s:nameScore(m.name,q.users)})).filter(x=>x.s).sort((a,b)=>b.s-a.s);return `<h2>Find members</h2><p class="sub">Search by name. Partial names and small typos still match.</p>
+<div class="card"><input id="q_users" value="${esc(q.users)}" placeholder="Try “Gwan” or “perera”" data-in="users" autofocus>
+<div class="tw" style="margin-top:12px"><table><tr><th>Name</th><th>Workplace</th><th>Phone</th><th>Points</th></tr>
+${r.map(x=>`<tr><td><b>${esc(x.m.name)}</b><br><span class="note">${esc(x.m.email)}</span></td><td>${esc(x.m.role)}, ${esc(x.m.work)}</td><td>${esc(x.m.phone)}</td><td>${x.m.pts}</td></tr>`).join('')||'<tr><td colspan="4" class="note">No members match. Check the spelling or search a surname.</td></tr>'}</table></div></div>`},
+jobs(){const r=S.jobs.map(j=>({j,s:sem(j,q.jobs)})).filter(x=>x.s).sort((a,b)=>b.s-a.s);return `<h2>Job search</h2><p class="sub">Describe the role in your own words. This demo simulates meaning-based matching; a live version would use embeddings.</p>
+<div class="card"><input id="q_jobs" value="${esc(q.jobs)}" placeholder="Try “someone good with numbers” or “work with people”" data-in="jobs">
+<div style="margin-top:12px">${r.map(x=>`<div style="padding:10px 0;border-bottom:1px solid var(--ln)"><b>${esc(x.j.t)}</b> <span class="note">${esc(x.j.c)}</span><br>${esc(x.j.d)}</div>`).join('')||'<p class="note">No matching roles. Try fewer or simpler words.</p>'}</div></div>`},
+sort(){const ap=S.pay.filter(p=>p.st==='approved'),g={},u={};ap.forEach(p=>{const k=sortMode==='month'?p.date.slice(0,7):p.date.slice(0,4);g[k]=(g[k]||0)+p.amt;u[p.m]=(u[p.m]||0)+p.amt});
+ const ks=Object.keys(g).sort().reverse(),mx=Math.max(...Object.values(g)),ul=Object.entries(u).sort((a,b)=>b[1]-a[1]);
+ return `<h2>Contribution totals</h2><p class="sub">Approved payments only, sorted by amount.</p>
+<div class="row" style="margin-bottom:12px"><button class="b ${sortMode==='month'?'':'alt'}" data-a="sm" data-id="month">Monthly</button><button class="b ${sortMode==='year'?'':'alt'}" data-a="sm" data-id="year">Yearly</button></div>
+<div class="card"><h3>By ${sortMode}</h3>${ks.map(k=>`<div style="margin-bottom:10px"><div class="row" style="justify-content:space-between"><span>${k}</span><b>${fmt(g[k])}</b></div><div class="bar" style="width:${g[k]/mx*100}%"></div></div>`).join('')}</div>
+<div class="card"><h3>Top contributors</h3><div class="tw"><table><tr><th>Member</th><th>Total</th></tr>${ul.map(([id,t])=>`<tr><td>${esc(nm(+id))}</td><td>${fmt(t)}</td></tr>`).join('')}</table></div></div>`},
+aeff(){return `<h2>Effort approvals</h2><p class="sub">A second person must approve each contribution. You can’t approve your own.</p>
+<div class="card"><div class="tw"><table><tr><th>Member</th><th>Contribution</th><th>Hours</th><th>Status</th><th></th></tr>
+${S.eff.map(e=>{const own=e.m===2;return `<tr><td>${esc(nm(e.m))}</td><td>${esc(e.title)}</td><td>${e.hrs}</td><td>${tag(e.st)}</td><td>${e.st==='pending'?(own?'<span class="note">Needs another approver</span>':`<div class="row"><button class="b" data-a="effOk" data-id="${e.id}">Approve</button><button class="b bad" data-a="effNo" data-id="${e.id}">Reject</button></div>`):''}</td></tr>`}).join('')}</table></div></div>`},
+pts(){return `<h2>Points</h2><p class="sub">Award points for approved effort. Totals update straight away.</p>
+<div class="card"><div class="row"><label style="flex:1;min-width:160px;margin:0">Member<select id="pt_m">${S.members.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></label>
+<label style="width:110px;margin:0">Points<input id="pt_v" type="number" value="10"></label>
+<label style="flex:1;min-width:160px;margin:0">Reason<input id="pt_r" placeholder="Organised seminar"></label>
+<button class="b" data-a="award" style="align-self:end">Assign points</button></div></div>
+<div class="card"><h3>Leaderboard</h3><div class="tw"><table><tr><th>Member</th><th>Points</th></tr>${S.members.slice().sort((a,b)=>b.pts-a.pts).map(m=>`<tr><td>${esc(m.name)}</td><td><b>${m.pts}</b></td></tr>`).join('')}</table></div></div>`},
+meet(){return `<h2>Batch meetings</h2><p class="sub">Schedule a meeting and track who’s coming.</p>
+<div class="card"><h3>Put up a meeting</h3><div class="grid">
+<label>Title<input id="m_t" placeholder="Reunion committee"></label><label>Date<input id="m_d" type="date" value="2026-11-15"></label><label>Venue<input id="m_v" placeholder="Club House"></label></div>
+<button class="b" data-a="addMeet">Publish meeting</button></div>
+${S.meet.slice().reverse().map(m=>{const v=Object.values(m.att);return `<div class="card"><h3>${esc(m.title)}</h3><span class="note">${m.date} &middot; ${esc(m.venue)}</span>
+<p>${v.filter(x=>x==='present').length} attending &middot; ${v.filter(x=>x==='excuse').length} excuses</p>
+${Object.entries(m.att).filter(([,s])=>s==='excuse').map(([id])=>`<span class="tag excuse">${esc(nm(+id))}</span> `).join('')}</div>`}).join('')}`},
+fin(){const pend=S.pay.filter(p=>p.st==='pending');return `<h2>Payment approvals</h2><p class="sub">For each payment: record it in Excel, file the slip in Google Drive (admins only), then approve.</p>
+${pend.map(p=>`<div class="card"><div class="row" style="justify-content:space-between"><div><h3>${esc(nm(p.m))} &middot; ${fmt(p.amt)}</h3><span class="note">${p.date} &middot; ${esc(p.slip)}</span></div>${tag(p.st)}</div>
+<div class="step" style="margin-top:10px"><button class="b ${p.xl?'alt':''}" data-a="xl" data-id="${p.id}" ${p.xl?'disabled':''}>${p.xl?'Recorded in Excel':'1. Record in Excel'}</button>
+<button class="b ${p.dr?'alt':''}" data-a="dr" data-id="${p.id}" ${p.dr?'disabled':''}>${p.dr?'Slip in Drive':'2. Upload slip to Drive'}</button>
+<button class="b" data-a="payOk" data-id="${p.id}" ${p.xl&&p.dr?'':'disabled'}>3. Approve</button>
+<button class="b bad" data-a="payNo" data-id="${p.id}">Reject</button></div></div>`).join('')||'<div class="card"><p class="note">All caught up. New payments appear here when members submit them.</p></div>'}
+<div class="card"><h3>Recently approved</h3><div class="tw"><table><tr><th>Member</th><th>Amount</th><th>Excel</th><th>Drive</th></tr>${S.pay.filter(p=>p.st==='approved').slice(-5).map(p=>`<tr><td>${esc(nm(p.m))}</td><td>${fmt(p.amt)}</td><td>Recorded</td><td>Filed</td></tr>`).join('')}</table></div></div>`}
+};
+const A={
+ saveProfile(){const m=S.members[0];['name','email','phone','work','role'].forEach(k=>m[k]=val('p_'+k)||m[k]);toast('Profile saved');},
+ addPay(){const a=+val('n_amt'),s=val('n_slip');if(!a||!s)return toast('Enter an amount and a slip file name');S.pay.push({id:Date.now(),m:1,amt:a,date:val('n_date'),slip:s,st:'pending',xl:0,dr:0});toast('Payment sent for approval');render()},
+ addEff(){const t=val('e_title'),h=+val('e_hrs');if(!t||!h)return toast('Describe the work and add hours');S.eff.push({id:Date.now(),m:1,title:t,hrs:h,st:'pending',pts:0});toast('Contribution sent for approval');render()},
+ present(id){S.meet.find(m=>m.id==id).att[1]='present';toast('Attendance recorded');render()},
+ excuse(id){if(!val('x_'+id))return toast('Add a reason for your excuse');S.meet.find(m=>m.id==id).att[1]='excuse';toast('Excuse raised');render()},
+ sm(id){sortMode=id;render()},
+ effOk(id){const e=S.eff.find(e=>e.id==id);e.st='approved';e.pts=e.hrs*2;S.members.find(m=>m.id===e.m).pts+=e.pts;toast('Approved. '+e.pts+' points awarded');render()},
+ effNo(id){S.eff.find(e=>e.id==id).st='rejected';toast('Rejected');render()},
+ award(){const m=S.members.find(m=>m.id==val('pt_m')),v=+val('pt_v');if(!v)return toast('Enter a point value');m.pts+=v;toast(v+' points given to '+m.name.split(' ')[0]);render()},
+ addMeet(){const t=val('m_t');if(!t)return toast('Give the meeting a title');S.meet.push({id:Date.now(),title:t,date:val('m_d'),venue:val('m_v')||'To be confirmed',open:1,att:{}});toast('Meeting published');render()},
+ xl(id){S.pay.find(p=>p.id==id).xl=1;render()},
+ dr(id){S.pay.find(p=>p.id==id).dr=1;render()},
+ payOk(id){S.pay.find(p=>p.id==id).st='approved';toast('Payment approved');render()},
+ payNo(id){S.pay.find(p=>p.id==id).st='rejected';toast('Payment rejected');render()}
+};
+function render(){const r=ROLES[role];if(!r.tabs.some(t=>t[0]===tab))tab=r.tabs[0][0];
+ $('#nav').innerHTML=r.tabs.map(t=>`<button data-tab="${t[0]}" class="${t[0]===tab?'on':''}">${t[1]}</button>`).join('');
+ $('#main').innerHTML=V[tab]()}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-tab]');if(t){tab=t.dataset.tab;return render()}const b=e.target.closest('[data-a]');if(b&&!b.disabled)A[b.dataset.a](b.dataset.id)});
+document.addEventListener('input',e=>{const k=e.target.dataset.in;if(!k)return;q[k]=e.target.value;const pos=e.target.selectionStart;render();const i=$('#q_'+k);i.focus();i.setSelectionRange(pos,pos)});
+$('#role').addEventListener('change',e=>{role=e.target.value;tab=ROLES[role].tabs[0][0];render()});
+render();
+</script>
+</body>
+</html>
